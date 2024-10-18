@@ -55,6 +55,8 @@ if __name__ == '__main__':
     print('loading ...')
     hypothesis = get_amr_ngrams(sys.argv[1])
     references = [[x] for x in get_amr_ngrams(sys.argv[2])]
+    # print(hypothesis)
+    # print(references)
     smoofunc = getattr(SmoothingFunction(), 'method3')
     print('evaluating ...')
     st = time.time()

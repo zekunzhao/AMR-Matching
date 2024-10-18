@@ -1,0 +1,7 @@
+(s24a / and
+  :op1 (s24t / temperature)
+  :op2 (s24c / concern-02
+         :ARG1 (s24a2 / and
+                 :op1 (s24h / humidity)
+                 :op2 (s24t2 / temperature))))
+

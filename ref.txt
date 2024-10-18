@@ -1,0 +1,12 @@
+(s29a / and
+  :op1 (s29t / temperature-quantity
+         :scale (s29c / celsius))
+  :op2 (s29t3 / temperature-quantity
+         :scale (s29f / fahrenheit))
+  :op3 (s29h / humid-02)
+  :op4 (s29p / pressure-01)
+  :op5 (s29s / small-molecule :name (s29n / name :op1 ""carbon"" :op2 ""dioxide""))
+  :op6 (s29c2 / compound :pl ""+""
+         :mod (s29v / volatile)
+         :mod (s29o / organic)
+         :mod (s29t2 / total-01)))
