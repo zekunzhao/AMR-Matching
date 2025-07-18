@@ -16,6 +16,9 @@ import fractions
 import warnings
 from fuzzywuzzy import fuzz
 from collections import Counter
+import nltk
+from nltk.util import ngrams
+from nltk.corpus import stopwords
 
 try:
     fractions.Fraction(0, 1000, _normalize=False)
@@ -47,12 +50,15 @@ def corpus_bleu(list_of_references, hypotheses, weights=(0.34, 0.33, 0.33),
             "The number of hypotheses and their reference(s) should be the same"
 
     # Iterate through each hypothesis and their corresponding references.
+    missing_set_total = set()
     for references, hypothesis in zip(list_of_references, hypotheses):
+        # print("checking")
+        # print(hypothesis)
         assert type(hypothesis.ngram) == dict and \
                 all(type(reference.ngram) == dict for reference in references)
         # For each order of ngram, calculate the numerator and
         # denominator for the corpus-level modified precision.
-        p_i , token_hyp_ref = modified_precision_amr(references, hypothesis, 1)
+        p_i , token_hyp_ref = modified_precision_amr(references, hypothesis, 1, missing_set_total)
         for i, _ in enumerate(weights, start=1):
             #print("modify hypothesis.ngram[i] ")
             for gram_index, hypothesis_gram in enumerate(hypothesis.ngram[i]):
@@ -62,12 +68,15 @@ def corpus_bleu(list_of_references, hypotheses, weights=(0.34, 0.33, 0.33),
                         tuple_list[item_index] = ''.join(token_hyp_ref[tuple([item])])
                         hypothesis.ngram[i][gram_index] = tuple(tuple_list)
             #print("finish modify hypothesis.ngram[i] ")
-            p_i , hyp_ref = modified_precision_amr(references, hypothesis, i)
+            p_i , hyp_ref = modified_precision_amr(references, hypothesis, i,missing_set_total)
             if p_i == None:
                 continue
             p_numerators[i] += p_i.numerator
             p_denominators[i] += p_i.denominator
-
+        print("partial_matching and missing concepts:")
+        print(str(missing_set_total))
+        with open ("temp.txt","w") as fw:
+            fw.writelines(str(missing_set_total))
         # Calculate the hypothesis length and the closest reference length.
         # Adds them to the corpus-level hypothesis and reference counts.
         hyp_len =  hypothesis.length
@@ -88,7 +97,7 @@ def corpus_bleu(list_of_references, hypotheses, weights=(0.34, 0.33, 0.33),
     # Collects the various precision values for the different ngram orders.
     p_n = [Fraction(p_numerators[i], p_denominators[i], _normalize=False)
            for i, _ in enumerate(weights, start=1)]
-
+    # print("rerewwwwwwwwwwwwwwwww")
     print(p_numerators)
 
     # Returns 0 if there's no matching n-grams
@@ -116,9 +125,14 @@ def match_concept(clipped_counts, reference_counts, n, ratio):
         for ref_ngram in reference_counts:
             # print(ngram)
             # print(ref_ngram)
+            if "name" in ref_ngram:
+                continue
             # print(ngram[:n])
             # print(ref_ngram[:n])
+            # print(ref_ngram[::2])
             # print("^match concept")
+            # print()
+            # var = input()
             partial_ratio = fuzz.partial_ratio(ngram[:n], ref_ngram[:n])
             if n == 100:
                 partial_ratio = fuzz.partial_ratio(ngram[::2], ref_ngram[::2])
@@ -130,7 +144,7 @@ def match_concept(clipped_counts, reference_counts, n, ratio):
                 hyp_ref[ngram] = ref_ngram
     return hyp_ref
 
-def modified_precision_amr(references, hypothesis, n):
+def modified_precision_amr(references, hypothesis, n, missing_set_total):
     # Extracts all ngrams in hypothesis
     # Set an empty Counter if hypothesis is empty.
     # print(f"Extracts all ngrams in hypothesis in {n} gram")
@@ -145,16 +159,22 @@ def modified_precision_amr(references, hypothesis, n):
         for ngram in counts:
             max_counts[ngram] = max(max_counts.get(ngram, 0),
                                     reference_counts[ngram])
-    #print 'max_counts', max_counts
+
     # print("max_counts")
     # print(max_counts)
+    # print("hypo_counts")
+    # print(counts)
+    # print("reference_counts")
+    # print(reference_counts)
+
 
     # Assigns the intersection between hypothesis and references' counts.
     clipped_counts = {ngram: min(count, max_counts[ngram])
                       for ngram, count in list(counts.items())}
-    #print 'clipped_counts', clipped_counts
+
     # print("clipped_counts")
     # print(clipped_counts)
+
 
     max_hyp_ref = match_concept(clipped_counts, reference_counts, n, 75)
     hyp_ref = match_concept(clipped_counts, reference_counts, 100 , 75)
@@ -164,12 +184,24 @@ def modified_precision_amr(references, hypothesis, n):
     # print(max_hyp_ref)
     # print("matching")
     # print(hyp_ref)
+    if n == 1:
+        keys_with_zero_value = [key[0].split("-")[0] for key, value in clipped_counts.items() if value == 0 and not any(sw in key for sw in set(stopwords.words('english'))) ]
+        # print("Unmatched")
+        # print(keys_with_zero_value)
+        missing_set_total.update(keys_with_zero_value)
+
+    # print()
     partial_matching = set(max_hyp_ref)-set(hyp_ref)
     if len(partial_matching) != 0:
-        print("partial_matching")
-        print(partial_matching)
-        print([missing_set[-1] for missing_set in partial_matching])
-
+        # print("partial_matching and missing concepts:")
+        #print(partial_matching)
+        ressult = [missing_set[-1].split("-")[0] for missing_set in partial_matching  if not any(sw in missing_set[-1].split("-") for sw in set(stopwords.words('english')))  ]
+        
+        missing_set_total.update(ressult)
+        # print(missing_set_total)
+        # print("partial_matching:")
+        # print(partial_matching)
+        # print()
     # print("after matching - clipped_counts")
     # print(clipped_counts)
 

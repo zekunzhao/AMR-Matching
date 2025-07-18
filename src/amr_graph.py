@@ -274,6 +274,7 @@ class AMRGraph(object):
                     self.extract_action(nxtr, nxtr_str, results, k+1, n, visited)
                     visited.remove(id)
 
+
     def extract_ngrams(self, n, multi_roots=False):
         assert n >= 1
         results = {k:[] for k in range(1,n+1)}
@@ -291,6 +292,8 @@ class AMRGraph(object):
                     queue.append(nid)
                     visited.add(nid)
         return results
+
+
 
     def clone_from_fragment(self, nroot, nset):
         sub = AMRGraph('')
@@ -805,6 +808,29 @@ class AMRGraph(object):
                         stack.append((child_index, curr_rel, depth+1, False))
                     else:
                         stack.append((child_index, curr_rel, depth+1, True))
+        return sequence
+
+    def bfs(self):
+        visited_nodes = set()
+        sequence = []
+        queue = deque([(self.root, None, 0, False)])
+        while queue:
+            curr_node_index, par_rel, depth, is_coref = queue.popleft()
+            sequence.append((curr_node_index, is_coref, par_rel, depth))  # record BFS visit info
+            if is_coref or curr_node_index in visited_nodes:
+                continue
+    
+            visited_nodes.add(curr_node_index)
+            curr_node = self.nodes[curr_node_index]
+            if len(curr_node.v_edges) > 0:
+                for edge_index in curr_node.v_edges:  # breadth first is normal order
+                    curr_edge = self.edges[edge_index]
+                    curr_rel = curr_edge.label
+                    child_index = curr_edge.tail
+                    if not curr_edge.is_coref:
+                        queue.append((child_index, curr_rel, depth+1, False))
+                    else:
+                        queue.append((child_index, curr_rel, depth+1, True))
         return sequence
 
     def collapsed_dfs(self, root2fragment):
